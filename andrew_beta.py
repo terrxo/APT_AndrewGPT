@@ -3,11 +3,16 @@
 # prerequisites: as described in https://alphacephei.com/vosk/install and also python module `sounddevice` (simply run command `pip install sounddevice`)
 # Example usage using Dutch (nl) recognition model: `python test_microphone.py -m nl`
 # For more help run: `python test_microphone.py -h`
-
+import openai
+import gtts
+import json
+from playsound import playsound#
+from os import system
 import argparse
 import queue
 import sys
 import sounddevice as sd
+import pprint
 
 from vosk import Model, KaldiRecognizer
 
@@ -25,6 +30,18 @@ def callback(indata, frames, time, status):
     if status:
         print(status, file=sys.stderr)
     q.put(bytes(indata))
+
+def apitalk(text):
+	print(text)
+	openai.api_key = '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'
+	prompt = text
+	response = openai.Completion.create(engine="text-davinci-001", prompt=prompt, max_tokens=1024)
+	print(response)
+	data = json.loads(str(response))
+	# pprint(data)
+	text = data['choices'][0]['text'].replace("\n", "")
+	print("say {}".format(text))
+	system("say {}".format(text))
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument(
@@ -76,11 +93,14 @@ try:
         while True:
             data = q.get()
             if rec.AcceptWaveform(data):
-                print(rec.Result())
-            else:
-                print(rec.PartialResult())
-            if dump_fn is not None:
-                dump_fn.write(data)
+                # print(rec.Result())
+                data = json.loads(rec.Result())
+                api_text = data['text']
+                print(api_text)
+                if 'andrew' in api_text:
+                    print(data['text'])
+                    apitalk(data['text'])
+                    exit()
 
 except KeyboardInterrupt:
     print("\nDone")
